@@ -63,3 +63,61 @@ class TestReagypInvoicing(AccountTestInvoicingCommon):
             places=2,
             msg="Compensation amount must be 12% of 1000 = 120.0",
         )
+
+    def test_retention_is_withheld_on_base_plus_compensation(self):
+        """A real olive receipt: the IRPF retention base includes the compensation.
+
+            10 680 kg x 0,65        base           6 942,00
+            + 12 % compensation                    +  833,04
+            - 2 % IRPF retention                   -  155,50
+                                                   ---------
+            total to collect                       7 619,54
+
+        The buyer withholds the 2 % on the base PLUS the flat-rate
+        compensation (6 942,00 + 833,04 = 7 775,04), not on the base alone.
+        That is what `include_base_amount` on the compensation tax encodes:
+        it feeds its own amount into the base of the taxes that follow it
+        (the retention has a higher sequence). Without it the retention would
+        be computed on 6 942,00 and come out as 138,84 — 16,66 EUR short.
+        """
+        product = self.env["product.product"].create(
+            {
+                "name": "Aceituna Convencional",
+                "taxes_id": [(6, 0, self.template.ref("tax_reagyp_s_ns").ids)],
+            }
+        )
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                # the partner carries fp_reagyp_sale, which maps the product's
+                # "no sujeto" tax to compensation 12 % + IRPF 2 %
+                "partner_id": self.partner.id,
+                "invoice_date": "2026-06-15",
+                "invoice_line_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "product_id": product.id,
+                            "quantity": 10680.0,
+                            "price_unit": 0.65,
+                        },
+                    )
+                ],
+            }
+        )
+        by_tax = {
+            line.tax_line_id: -line.balance
+            for line in move.line_ids.filtered("tax_line_id")
+        }
+        compensation = self.template.ref("tax_reagyp_s_12")
+        retention = self.template.ref("account_tax_template_s_irpf2")
+        self.assertAlmostEqual(move.amount_untaxed, 6942.00, places=2)
+        self.assertAlmostEqual(by_tax[compensation], 833.04, places=2)
+        self.assertAlmostEqual(
+            by_tax[retention],
+            -155.50,
+            places=2,
+            msg="IRPF must be 2% of base + compensation (7 775,04), not of the base",
+        )
+        self.assertAlmostEqual(move.amount_total, 7619.54, places=2)
