@@ -2,12 +2,14 @@
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 import logging
 
+from odoo import SUPERUSER_ID, api
+
 _logger = logging.getLogger(__name__)
 
 COMPENSATION_TEMPLATES = ("tax_reagyp_s_12", "tax_reagyp_s_105")
 
 
-def migrate(env, version):
+def migrate(cr, version):
     """Backfill `include_base_amount` on already-instantiated compensation taxes.
 
     The IRPF retention is withheld on base + compensation, which is what
@@ -19,6 +21,7 @@ def migrate(env, version):
     would go on under-withholding (2 % of the base instead of 2 % of base +
     compensation). Update those taxes in place.
     """
+    env = api.Environment(cr, SUPERUSER_ID, {})
     Template = env["account.chart.template"]
     fixed = 0
     for company in env["res.company"].search([]):

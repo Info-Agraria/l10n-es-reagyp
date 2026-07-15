@@ -2,10 +2,12 @@
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 import logging
 
+from odoo import SUPERUSER_ID, api
+
 _logger = logging.getLogger(__name__)
 
 
-def migrate(env, version):
+def migrate(cr, version):
     """Lower the REAGYP compensation tax group's sequence on existing installs.
 
     The sequence orders the blocks in the invoice's tax-totals summary. All
@@ -18,6 +20,7 @@ def migrate(env, version):
     This is presentation only: the tax *computation* order is governed by the
     taxes' own sequence (compensation 1, retention 1000), untouched here.
     """
+    env = api.Environment(cr, SUPERUSER_ID, {})
     Template = env["account.chart.template"]
     fixed = 0
     for company in env["res.company"].search([]):
