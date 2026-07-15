@@ -22,11 +22,14 @@ def migrate(env, version):
     fixed = 0
     for company in env["res.company"].search([]):
         group = Template.with_company(company).ref(
-            "tax_group_reagyp", raise_if_not_found=False)
+            "tax_group_reagyp", raise_if_not_found=False
+        )
         if group and group.sequence != 5:
             group.sequence = 5
             fixed += 1
     if fixed:
         _logger.info(
             "l10n_es_reagyp: set REAGYP tax group sequence on %s company(ies) "
-            "so compensation renders before the IRPF retention", fixed)
+            "so compensation renders before the IRPF retention",
+            fixed,
+        )

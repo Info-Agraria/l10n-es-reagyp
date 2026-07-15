@@ -38,8 +38,10 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         retention = self._ref("account_tax_template_s_irpf2")
         self.assertTrue(retention, "core retention tax s_irpf2 not found")
         self.assertLess(
-            grp.sequence, retention.tax_group_id.sequence,
-            "REAGYP compensation must sort before the IRPF retention")
+            grp.sequence,
+            retention.tax_group_id.sequence,
+            "REAGYP compensation must sort before the IRPF retention",
+        )
 
     def test_compensation_12_tax(self):
         tax = self._ref("tax_reagyp_s_12")
