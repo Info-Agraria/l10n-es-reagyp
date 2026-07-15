@@ -27,6 +27,22 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         self.assertTrue(grp, "tax_group_reagyp not instantiated")
         self.assertNotIn("iva", grp.name.lower())
 
+    def test_tax_group_orders_before_retention(self):
+        # The tax-group sequence orders the blocks in the invoice tax-totals
+        # summary. The compensation must render BEFORE the IRPF retention
+        # (base -> compensation -> retention), so its group needs a lower
+        # sequence than the core retention group (which ships at 10).
+        # Presentation only: tax *computation* order is set by the taxes' own
+        # sequence (compensation 1, retention 1000), not by this.
+        grp = self._ref("tax_group_reagyp")
+        retention = self._ref("account_tax_template_s_irpf2")
+        self.assertTrue(retention, "core retention tax s_irpf2 not found")
+        self.assertLess(
+            grp.sequence,
+            retention.tax_group_id.sequence,
+            "REAGYP compensation must sort before the IRPF retention",
+        )
+
     def test_compensation_12_tax(self):
         tax = self._ref("tax_reagyp_s_12")
         self.assertTrue(tax, "tax_reagyp_s_12 not instantiated")
