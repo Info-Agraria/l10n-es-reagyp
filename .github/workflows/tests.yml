@@ -2,19 +2,19 @@ name: tests
 
 on:
   push:
-    branches: ["18.0"]
+    branches: ["19.0"]
   pull_request:
-    branches: ["18.0*"]
+    branches: ["19.0*"]
 
 jobs:
   test:
-    name: Odoo 18 unit tests
+    name: Odoo 19 unit tests
     runs-on: ubuntu-latest
-    # The official odoo:18 image already has Odoo on PATH plus all of its
+    # The official odoo:19 image already has Odoo on PATH plus all of its
     # Python dependencies. We override the default entrypoint to run our
     # own commands rather than auto-starting the server.
     container:
-      image: odoo:18
+      image: odoo:19
       options: --user root
     services:
       postgres:
@@ -51,7 +51,7 @@ jobs:
             --test-enable \
             --test-tags=l10n_es_reagyp \
             --init=l10n_es_reagyp \
-            --without-demo=all \
+            --without-demo \
             --database=odoo_ci_test \
             --stop-after-init \
             --no-http \

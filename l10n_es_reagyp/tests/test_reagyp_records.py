@@ -35,8 +35,8 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         # Presentation only: tax *computation* order is set by the taxes' own
         # sequence (compensation 1, retention 1000), not by this.
         grp = self._ref("tax_group_reagyp")
-        retention = self._ref("account_tax_template_s_irpf2")
-        self.assertTrue(retention, "core retention tax s_irpf2 not found")
+        retention = self._ref("tax_reagyp_s_irpf2")
+        self.assertTrue(retention, "REAGYP retention tax not instantiated")
         self.assertLess(
             grp.sequence,
             retention.tax_group_id.sequence,
@@ -69,21 +69,38 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         self.assertEqual(tax.type_tax_use, "sale")
         self.assertEqual(tax.amount, 0.0)
 
-    def test_fiscal_position_exists_with_mappings(self):
+    def test_fiscal_position_maps_no_sujeto_to_compensation_and_retention(self):
+        # 19.0 removed account.fiscal.position.tax: the mapping now lives on
+        # the destination tax, which declares the positions it applies in and
+        # the taxes it replaces. The position derives its tax_map from that.
         fp = self._ref("fp_reagyp_sale")
         self.assertTrue(fp, "fp_reagyp_sale not instantiated")
-        # Sale: no-sujeto source -> compensation 12%
-        sale_dests = fp.tax_ids.filtered(
-            lambda m: m.tax_src_id == self._ref("tax_reagyp_s_ns")
-        ).mapped("tax_dest_id")
-        self.assertIn(self._ref("tax_reagyp_s_12"), sale_dests)
-        # Purchase: IVA 21% -> 21% non-deductible (core p_iva0_nd)
-        nd21 = self._ref("account_tax_template_p_iva0_nd")
-        bc21 = self._ref("account_tax_template_p_iva21_bc")
-        purchase_dests = fp.tax_ids.filtered(lambda m: m.tax_src_id == bc21).mapped(
-            "tax_dest_id"
+        source = self._ref("tax_reagyp_s_ns")
+        compensation = self._ref("tax_reagyp_s_12")
+        retention = self._ref("tax_reagyp_s_irpf2")
+        for destination in (compensation, retention):
+            self.assertEqual(destination.fiscal_position_ids, fp)
+            self.assertEqual(destination.original_tax_ids, source)
+        self.assertEqual(
+            set(fp.map_tax(source).ids),
+            set((compensation + retention).ids),
+            "The no-sujeto sale tax must resolve to compensation + retention",
         )
-        self.assertIn(nd21, purchase_dests)
+
+    def test_fiscal_position_leaves_core_vat_sales_alone(self):
+        # The reason the module ships its own retention instead of reusing the
+        # core one: a destination tax carries the same substitution in every
+        # position it belongs to, and the core 2% retention lists every sale
+        # VAT tax among its original_tax_ids. Borrowing it would strip the VAT
+        # off any ordinary sale made to a partner carrying this position.
+        fp = self._ref("fp_reagyp_sale")
+        iva21 = self._ref("account_tax_template_s_iva21b")
+        self.assertTrue(iva21, "core sale VAT 21% not found")
+        self.assertEqual(
+            fp.map_tax(iva21),
+            iva21,
+            "An ordinary 21% sale must pass through the REAGYP position untouched",
+        )
 
     def test_reagyp_journal_exists(self):
         journal = self._ref("reagyp_sale")

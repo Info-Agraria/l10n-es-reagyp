@@ -111,7 +111,7 @@ class TestReagypInvoicing(AccountTestInvoicingCommon):
             for line in move.line_ids.filtered("tax_line_id")
         }
         compensation = self.template.ref("tax_reagyp_s_12")
-        retention = self.template.ref("account_tax_template_s_irpf2")
+        retention = self.template.ref("tax_reagyp_s_irpf2")
         self.assertAlmostEqual(move.amount_untaxed, 6942.00, places=2)
         self.assertAlmostEqual(by_tax[compensation], 833.04, places=2)
         self.assertAlmostEqual(
