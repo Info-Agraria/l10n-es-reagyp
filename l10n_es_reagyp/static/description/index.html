@@ -1,51 +1,74 @@
+<!--
+  Odoo Apps Store description.
+
+  Constraints this markup works around, verified against the live store page:
+    * The store strips <style> and <link>, so all layout must come from the
+      Bootstrap 5 utilities already loaded by web.assets_frontend, plus inline
+      styles for the few rules a utility cannot express.
+    * The legacy grid (.oe_row / .oe_span*) is hard-coded to 928px / 464px
+      wide - not max-width - so it overflows on phones and gets clipped by
+      the "overflow: hidden" on .oe_styling_v8 .oe_dark. Use .row / .col-* .
+    * The store re-encodes the file as latin-1, so non-ASCII bytes come back
+      as mojibake. Accented characters must be HTML entities.
+-->
 <section class="oe_container">
-  <div class="oe_row oe_spaced">
-    <img
-      class="oe_picture oe_centered"
-      src="banner.png"
-      alt="Spain - REAGYP (seller side)"
-      style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
-    />
+  <div class="row justify-content-center">
+    <div class="col-12 text-center py-4">
+      <img
+        class="img-fluid rounded"
+        src="banner.png"
+        alt="Spain - REAGYP (seller side)"
+      />
+    </div>
   </div>
 </section>
+
 <section class="oe_container">
-  <div class="oe_row oe_spaced">
-    <h2 class="oe_slogan">Spain - REAGYP (seller side)</h2>
-    <h3 class="oe_slogan">
-      Seller-side fiscal layer for the Spanish REAGYP special VAT regime
-    </h3>
-    <div class="oe_span12">
-      <p class="oe_mt32">
+  <div class="row justify-content-center py-4">
+    <div class="col-12 col-lg-10 text-break">
+      <!-- .oe_styling_v8 h2.oe_slogan pins font-size to a fixed 40px and wins
+           over the .fs-* utilities, so the fluid size has to be inline. -->
+      <h2 class="oe_slogan" style="font-size: clamp(1.75rem, 5vw, 2.5rem);">
+        Spain - REAGYP (seller side)
+      </h2>
+      <h3 class="oe_slogan" style="font-size: clamp(1.05rem, 3vw, 1.625rem);">
+        Seller-side fiscal layer for the Spanish REAGYP special VAT regime
+      </h3>
+      <p class="lead mt-4">
         This module adds the <b>seller-side</b> fiscal layer for the Spanish
-        <b>REAGYP</b> regime (<i>Régimen Especial de la Agricultura,
-        Ganadería y Pesca</i>) on top of the mainland Spanish chart of
+        <b>REAGYP</b> regime (<i>R&eacute;gimen Especial de la Agricultura,
+        Ganader&iacute;a y Pesca</i>) on top of the mainland Spanish chart of
         accounts (<code>l10n_es</code>).
       </p>
-      <p>
-        Farmers, stockbreeders and fishers under this special VAT regime do
-        not charge VAT on their sales; instead, the buyer pays them a
-        flat-rate <b>compensation</b> (12% for agricultural and forestry
-        products, 10.5% for livestock and fishing products). This module
-        provides everything the seller needs to invoice that compensation
-        correctly.
+      <p class="mb-0">
+        Farmers, stockbreeders and fishers under this special VAT regime do not
+        charge VAT on their sales; instead, the buyer pays them a flat-rate
+        <b>compensation</b> (12% for agricultural and forestry products, 10.5%
+        for livestock and fishing products). This module provides everything
+        the seller needs to invoice that compensation correctly.
       </p>
     </div>
   </div>
 </section>
+
 <section class="oe_container oe_dark">
-  <div class="oe_row oe_spaced">
-    <div class="oe_span6">
-      <h3 class="oe_slogan">What it adds</h3>
-      <ul>
+  <div class="row g-4 py-4 align-items-start">
+    <div class="col-12 col-md-6 text-break">
+      <h3 class="oe_slogan" style="font-size: clamp(1.05rem, 3vw, 1.625rem);">
+        What it adds
+      </h3>
+      <ul class="ps-4 mb-0">
         <li>Compensation taxes (12% / 10.5%) on the <code>es_common_mainland</code> chart.</li>
         <li>A dedicated fiscal position mapping sale taxes to REAGYP compensation taxes.</li>
         <li>A dedicated REAGYP receipts journal (<i>recibo</i>).</li>
         <li>The required accounts and tax group for the compensation.</li>
       </ul>
     </div>
-    <div class="oe_span6">
-      <h3 class="oe_slogan">Zero configuration</h3>
-      <p>
+    <div class="col-12 col-md-6 text-break">
+      <h3 class="oe_slogan" style="font-size: clamp(1.05rem, 3vw, 1.625rem);">
+        Zero configuration
+      </h3>
+      <p class="mb-0">
         On installation the data is injected into the chart template. A
         <code>post_init_hook</code> backfills companies that already had a
         mainland Spanish chart installed. Canary Islands charts are out of
@@ -54,11 +77,14 @@
     </div>
   </div>
 </section>
+
 <section class="oe_container">
-  <div class="oe_row oe_spaced">
-    <div class="oe_span12">
-      <h3 class="oe_slogan">Info Agraria</h3>
-      <p>
+  <div class="row justify-content-center py-4">
+    <div class="col-12 col-lg-10 text-break">
+      <h3 class="oe_slogan" style="font-size: clamp(1.05rem, 3vw, 1.625rem);">
+        Info Agraria
+      </h3>
+      <p class="mb-0">
         Open-source software and consulting for Spanish agriculture.
         Contact: <a href="mailto:info@infoagraria.es">info@infoagraria.es</a>
       </p>
