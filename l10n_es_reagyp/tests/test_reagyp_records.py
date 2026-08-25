@@ -35,8 +35,8 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         # Presentation only: tax *computation* order is set by the taxes' own
         # sequence (compensation 1, retention 1000), not by this.
         grp = self._ref("tax_group_reagyp")
-        retention = self._ref("tax_reagyp_s_irpf2")
-        self.assertTrue(retention, "REAGYP retention tax not instantiated")
+        retention = self._ref("account_tax_template_s_irpf2")
+        self.assertTrue(retention, "core retention tax s_irpf2 not found")
         self.assertLess(
             grp.sequence,
             retention.tax_group_id.sequence,
@@ -69,22 +69,40 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         self.assertEqual(tax.type_tax_use, "sale")
         self.assertEqual(tax.amount, 0.0)
 
-    def test_fiscal_position_maps_no_sujeto_to_compensation_and_retention(self):
+    def test_fiscal_position_maps_no_sujeto_to_the_group_tax(self):
         # 19.0 removed account.fiscal.position.tax: the mapping now lives on
         # the destination tax, which declares the positions it applies in and
         # the taxes it replaces. The position derives its tax_map from that.
         fp = self._ref("fp_reagyp_sale")
         self.assertTrue(fp, "fp_reagyp_sale not instantiated")
         source = self._ref("tax_reagyp_s_ns")
-        compensation = self._ref("tax_reagyp_s_12")
-        retention = self._ref("tax_reagyp_s_irpf2")
-        for destination in (compensation, retention):
-            self.assertEqual(destination.fiscal_position_ids, fp)
-            self.assertEqual(destination.original_tax_ids, source)
+        bundle = self._ref("tax_reagyp_s_12_irpf2")
+        self.assertTrue(bundle, "tax_reagyp_s_12_irpf2 not instantiated")
+        self.assertEqual(bundle.amount_type, "group")
+        self.assertEqual(bundle.fiscal_position_ids, fp)
+        self.assertEqual(bundle.original_tax_ids, source)
         self.assertEqual(
-            set(fp.map_tax(source).ids),
-            set((compensation + retention).ids),
-            "The no-sujeto sale tax must resolve to compensation + retention",
+            fp.map_tax(source),
+            bundle,
+            "The no-sujeto sale tax must resolve to the REAGYP group tax",
+        )
+
+    def test_group_tax_bundles_compensation_and_the_core_retention(self):
+        # The group exists so that the retention can be the core tax instead of
+        # a copy of it: a destination tax carries the same substitution in
+        # every position it belongs to, so hooking the core retention directly
+        # onto our position would drag its own originals in with it.
+        bundle = self._ref("tax_reagyp_s_12_irpf2")
+        compensation = self._ref("tax_reagyp_s_12")
+        core_retention = self._ref("account_tax_template_s_irpf2")
+        self.assertEqual(bundle.children_tax_ids, compensation + core_retention)
+        self.assertTrue(
+            compensation.include_base_amount,
+            "The compensation must feed the base of the retention that follows",
+        )
+        self.assertFalse(
+            core_retention.fiscal_position_ids & bundle.fiscal_position_ids,
+            "The core retention must stay out of the REAGYP fiscal position",
         )
 
     def test_fiscal_position_leaves_core_vat_sales_alone(self):
