@@ -69,21 +69,56 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         self.assertEqual(tax.type_tax_use, "sale")
         self.assertEqual(tax.amount, 0.0)
 
-    def test_fiscal_position_exists_with_mappings(self):
+    def test_fiscal_position_maps_no_sujeto_to_the_group_tax(self):
+        # 19.0 removed account.fiscal.position.tax: the mapping now lives on
+        # the destination tax, which declares the positions it applies in and
+        # the taxes it replaces. The position derives its tax_map from that.
         fp = self._ref("fp_reagyp_sale")
         self.assertTrue(fp, "fp_reagyp_sale not instantiated")
-        # Sale: no-sujeto source -> compensation 12%
-        sale_dests = fp.tax_ids.filtered(
-            lambda m: m.tax_src_id == self._ref("tax_reagyp_s_ns")
-        ).mapped("tax_dest_id")
-        self.assertIn(self._ref("tax_reagyp_s_12"), sale_dests)
-        # Purchase: IVA 21% -> 21% non-deductible (core p_iva0_nd)
-        nd21 = self._ref("account_tax_template_p_iva0_nd")
-        bc21 = self._ref("account_tax_template_p_iva21_bc")
-        purchase_dests = fp.tax_ids.filtered(lambda m: m.tax_src_id == bc21).mapped(
-            "tax_dest_id"
+        source = self._ref("tax_reagyp_s_ns")
+        bundle = self._ref("tax_reagyp_s_12_irpf2")
+        self.assertTrue(bundle, "tax_reagyp_s_12_irpf2 not instantiated")
+        self.assertEqual(bundle.amount_type, "group")
+        self.assertEqual(bundle.fiscal_position_ids, fp)
+        self.assertEqual(bundle.original_tax_ids, source)
+        self.assertEqual(
+            fp.map_tax(source),
+            bundle,
+            "The no-sujeto sale tax must resolve to the REAGYP group tax",
         )
-        self.assertIn(nd21, purchase_dests)
+
+    def test_group_tax_bundles_compensation_and_the_core_retention(self):
+        # The group exists so that the retention can be the core tax instead of
+        # a copy of it: a destination tax carries the same substitution in
+        # every position it belongs to, so hooking the core retention directly
+        # onto our position would drag its own originals in with it.
+        bundle = self._ref("tax_reagyp_s_12_irpf2")
+        compensation = self._ref("tax_reagyp_s_12")
+        core_retention = self._ref("account_tax_template_s_irpf2")
+        self.assertEqual(bundle.children_tax_ids, compensation + core_retention)
+        self.assertTrue(
+            compensation.include_base_amount,
+            "The compensation must feed the base of the retention that follows",
+        )
+        self.assertFalse(
+            core_retention.fiscal_position_ids & bundle.fiscal_position_ids,
+            "The core retention must stay out of the REAGYP fiscal position",
+        )
+
+    def test_fiscal_position_leaves_core_vat_sales_alone(self):
+        # The reason the module ships its own retention instead of reusing the
+        # core one: a destination tax carries the same substitution in every
+        # position it belongs to, and the core 2% retention lists every sale
+        # VAT tax among its original_tax_ids. Borrowing it would strip the VAT
+        # off any ordinary sale made to a partner carrying this position.
+        fp = self._ref("fp_reagyp_sale")
+        iva21 = self._ref("account_tax_template_s_iva21b")
+        self.assertTrue(iva21, "core sale VAT 21% not found")
+        self.assertEqual(
+            fp.map_tax(iva21),
+            iva21,
+            "An ordinary 21% sale must pass through the REAGYP position untouched",
+        )
 
     def test_reagyp_journal_exists(self):
         journal = self._ref("reagyp_sale")
