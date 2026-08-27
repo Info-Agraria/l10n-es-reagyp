@@ -15,20 +15,27 @@ MOVED_SOURCES = (
 )
 
 
-def _create_purchase_position(template):
+def _create_purchase_position(template, company):
     """Instantiate fp_reagyp_purchase, which only exists from 18.0.1.1.0 on.
 
     Chart-template records are created when the module is installed, never
     when it is upgraded, so an existing database has no such position yet.
     Only this record is loaded: reloading the whole template would reset
     fields a deployment may have edited by hand, the position names included.
+
+    Translations need loading by hand as well. `_load_data` strips the `name@es`
+    columns off the values, and the step that turns them into translations only
+    runs from the full chart load, so a record created here would keep its
+    English name in every language.
     """
     if template.ref(PURCHASE_XMLID, raise_if_not_found=False):
         return False
-    data = template._get_reagyp_account_fiscal_position().get(PURCHASE_XMLID)
-    if not data:
+    values = template._get_reagyp_account_fiscal_position().get(PURCHASE_XMLID)
+    if not values:
         return False
-    template._load_data({"account.fiscal.position": {PURCHASE_XMLID: data}})
+    data = {"account.fiscal.position": {PURCHASE_XMLID: values}}
+    template._load_data(data)
+    template._load_translations(companies=company, template_data=data)
     return True
 
 
@@ -67,7 +74,7 @@ def migrate(cr, version):
     created = moved = 0
     for company in env["res.company"].search([]):
         template = env["account.chart.template"].with_company(company)
-        if _create_purchase_position(template):
+        if _create_purchase_position(template, company):
             created += 1
         moved += _strip_purchase_half(template)
 
