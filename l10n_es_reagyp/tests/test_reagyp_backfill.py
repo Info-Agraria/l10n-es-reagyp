@@ -26,6 +26,8 @@ class TestReagypBackfill(AccountTestInvoicingCommon):
         self.assertTrue(template.ref("tax_reagyp_s_12", raise_if_not_found=False))
         self.assertTrue(template.ref("reagyp_sale", raise_if_not_found=False))
         self.assertTrue(template.ref("fp_reagyp_sale", raise_if_not_found=False))
+        self.assertTrue(template.ref("fp_reagyp_purchase", raise_if_not_found=False))
+        self.assertTrue(template.ref("tax_reagyp_p_iva21_nd", raise_if_not_found=False))
         # The 19.0.1.0.0 migration leans on this hook to create the group
         # tax on databases that already had the chart loaded.
         self.assertTrue(template.ref("tax_reagyp_s_12_irpf2", raise_if_not_found=False))

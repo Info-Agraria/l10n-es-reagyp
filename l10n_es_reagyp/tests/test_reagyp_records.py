@@ -120,6 +120,51 @@ class TestReagypRecords(AccountTestInvoicingCommon):
             "An ordinary 21% sale must pass through the REAGYP position untouched",
         )
 
+    def test_purchase_fiscal_position_makes_input_vat_non_deductible(self):
+        fp = self._ref("fp_reagyp_purchase")
+        self.assertTrue(fp, "fp_reagyp_purchase not instantiated")
+        for source_xmlid, wrapper_xmlid in (
+            ("account_tax_template_p_iva21_bc", "tax_reagyp_p_iva21_nd"),
+            ("account_tax_template_p_iva10_bc", "tax_reagyp_p_iva10_nd"),
+            ("account_tax_template_p_iva4_bc", "tax_reagyp_p_iva4_nd"),
+        ):
+            source = self._ref(source_xmlid)
+            self.assertEqual(fp.map_tax(source), self._ref(wrapper_xmlid), source_xmlid)
+
+    def test_purchase_wrappers_leave_the_core_taxes_alone(self):
+        # Same reasoning as the sale bundle: a destination tax carries the same
+        # substitution in every position it belongs to, and the core
+        # non-deductible taxes belong to the domestic position. Attaching them
+        # here would make every domestic purchase non-deductible company-wide,
+        # so each one is wrapped in a group that lives only in our position.
+        wrapper = self._ref("tax_reagyp_p_iva21_nd")
+        core_nd = self._ref("account_tax_template_p_iva0_nd")
+        self.assertEqual(wrapper.amount_type, "group")
+        self.assertEqual(wrapper.children_tax_ids, core_nd)
+        self.assertEqual(wrapper.fiscal_position_ids, self._ref("fp_reagyp_purchase"))
+        self.assertNotIn(
+            self._ref("fp_reagyp_purchase"),
+            core_nd.fiscal_position_ids,
+            "The core non-deductible tax must stay out of the REAGYP position",
+        )
+
+    def test_domestic_purchases_stay_deductible(self):
+        domestic = self._ref("l10n_es_domestic_fiscal_position")
+        self.assertTrue(domestic, "domestic fiscal position not found")
+        bc21 = self._ref("account_tax_template_p_iva21_bc")
+        self.assertEqual(
+            domestic.map_tax(bc21),
+            bc21,
+            "An ordinary domestic purchase must keep its deductible VAT",
+        )
+
+    def test_positions_are_assigned_by_hand(self):
+        # Like every regime position core ships (fp_reagyp_a, fp_irpf*).
+        # Whether the purchase one should cover every supplier is a
+        # bookkeeping decision, so it is left to the deployment.
+        self.assertFalse(self._ref("fp_reagyp_sale").auto_apply)
+        self.assertFalse(self._ref("fp_reagyp_purchase").auto_apply)
+
     def test_reagyp_journal_exists(self):
         journal = self._ref("reagyp_sale")
         self.assertTrue(journal, "reagyp_sale journal not instantiated")
