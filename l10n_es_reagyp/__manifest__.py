@@ -2,7 +2,7 @@
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 {
     "name": "Spain - REAGYP (seller side)",
-    "version": "18.0.1.0.2",
+    "version": "18.0.1.1.0",
     "category": "Localization/Account Charts",
     "summary": "Seller-side REAGYP fiscal layer: sale compensation taxes, "
     "fiscal position, dedicated receipts journal. Complements the "
