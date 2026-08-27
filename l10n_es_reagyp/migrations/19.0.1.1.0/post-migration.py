@@ -21,7 +21,7 @@ CORE_NON_DEDUCTIBLE = (
 POSITIONS = ("fp_reagyp_sale", PURCHASE_POSITION)
 
 
-def _create_records(template):
+def _create_records(template, company):
     """Instantiate the purchase position and its three wrapper taxes.
 
     Chart-template records are created when the module is installed, never
@@ -29,10 +29,11 @@ def _create_records(template):
     template would reset fields a deployment may have edited by hand.
     """
     created = 0
+    data = {}
     if not template.ref(PURCHASE_POSITION, raise_if_not_found=False):
-        data = template._get_reagyp_account_fiscal_position().get(PURCHASE_POSITION)
-        if data:
-            template._load_data({"account.fiscal.position": {PURCHASE_POSITION: data}})
+        values = template._get_reagyp_account_fiscal_position().get(PURCHASE_POSITION)
+        if values:
+            data["account.fiscal.position"] = {PURCHASE_POSITION: values}
             created += 1
     taxes = template._get_reagyp_account_tax()
     missing = {
@@ -41,8 +42,14 @@ def _create_records(template):
         if xmlid in taxes and not template.ref(xmlid, raise_if_not_found=False)
     }
     if missing:
-        template._load_data({"account.tax": missing})
+        data["account.tax"] = missing
         created += len(missing)
+    if data:
+        template._load_data(data)
+        # `_load_data` strips the `name@es` columns, and the step that turns
+        # them into translations only runs from the full chart load, so these
+        # records would otherwise keep their English name in every language.
+        template._load_translations(companies=company, template_data=data)
     return created
 
 
@@ -97,7 +104,7 @@ def migrate(cr, version):
         template = env["account.chart.template"].with_company(company)
         if not template.ref("fp_reagyp_sale", raise_if_not_found=False):
             continue
-        created += _create_records(template)
+        created += _create_records(template, company)
         released += _release_core_non_deductible(template)
     if created or released:
         _logger.info(

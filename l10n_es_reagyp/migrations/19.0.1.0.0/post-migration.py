@@ -38,7 +38,12 @@ def _create_bundle_tax(env):
         bundle = template._get_reagyp_account_tax().get(BUNDLE_XMLID)
         if not bundle:
             continue
-        template._load_data({"account.tax": {BUNDLE_XMLID: bundle}})
+        data = {"account.tax": {BUNDLE_XMLID: bundle}}
+        template._load_data(data)
+        # `_load_data` strips the `name@es` columns, and the step that turns
+        # them into translations only runs from the full chart load, so the
+        # record would otherwise keep its English name in every language.
+        template._load_translations(companies=company, template_data=data)
         created += 1
     if created:
         _logger.info(
