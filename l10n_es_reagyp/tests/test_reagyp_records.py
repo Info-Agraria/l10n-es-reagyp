@@ -69,21 +69,48 @@ class TestReagypRecords(AccountTestInvoicingCommon):
         self.assertEqual(tax.type_tax_use, "sale")
         self.assertEqual(tax.amount, 0.0)
 
-    def test_fiscal_position_exists_with_mappings(self):
+    def test_sale_fiscal_position_maps_the_sale_half(self):
         fp = self._ref("fp_reagyp_sale")
         self.assertTrue(fp, "fp_reagyp_sale not instantiated")
-        # Sale: no-sujeto source -> compensation 12%
-        sale_dests = fp.tax_ids.filtered(
-            lambda m: m.tax_src_id == self._ref("tax_reagyp_s_ns")
-        ).mapped("tax_dest_id")
-        self.assertIn(self._ref("tax_reagyp_s_12"), sale_dests)
-        # Purchase: IVA 21% -> 21% non-deductible (core p_iva0_nd)
-        nd21 = self._ref("account_tax_template_p_iva0_nd")
-        bc21 = self._ref("account_tax_template_p_iva21_bc")
-        purchase_dests = fp.tax_ids.filtered(lambda m: m.tax_src_id == bc21).mapped(
+        source = self._ref("tax_reagyp_s_ns")
+        dests = fp.tax_ids.filtered(lambda m: m.tax_src_id == source).mapped(
             "tax_dest_id"
         )
-        self.assertIn(nd21, purchase_dests)
+        self.assertIn(self._ref("tax_reagyp_s_12"), dests)
+        self.assertIn(self._ref("account_tax_template_s_irpf2"), dests)
+
+    def test_sale_fiscal_position_no_longer_carries_purchase_mappings(self):
+        # Which taxes a sale carries depends on the buyer's regime; whether
+        # input VAT is deductible depends only on the farmer. Tying the second
+        # to the first meant it reached the customers and missed the suppliers.
+        fp = self._ref("fp_reagyp_sale")
+        purchase_sources = fp.tax_ids.mapped("tax_src_id").filtered(
+            lambda tax: tax.type_tax_use == "purchase"
+        )
+        self.assertFalse(
+            purchase_sources,
+            "The sale position must not map purchase taxes any more",
+        )
+
+    def test_purchase_fiscal_position_makes_input_vat_non_deductible(self):
+        fp = self._ref("fp_reagyp_purchase")
+        self.assertTrue(fp, "fp_reagyp_purchase not instantiated")
+        for source_xmlid, dest_xmlid in (
+            ("account_tax_template_p_iva21_bc", "account_tax_template_p_iva0_nd"),
+            ("account_tax_template_p_iva10_bc", "account_tax_template_p_iva10_nd"),
+            ("account_tax_template_p_iva4_bc", "account_tax_template_p_iva4_nd"),
+        ):
+            source = self._ref(source_xmlid)
+            dests = fp.tax_ids.filtered(
+                lambda m, source=source: m.tax_src_id == source
+            ).mapped("tax_dest_id")
+            self.assertIn(self._ref(dest_xmlid), dests, source_xmlid)
+
+    def test_purchase_fiscal_position_is_assigned_by_hand(self):
+        # Same as every regime position core ships (fp_reagyp_a, fp_irpf*):
+        # no auto_apply, the bookkeeper decides which partners carry it.
+        self.assertFalse(self._ref("fp_reagyp_purchase").auto_apply)
+        self.assertFalse(self._ref("fp_reagyp_sale").auto_apply)
 
     def test_reagyp_journal_exists(self):
         journal = self._ref("reagyp_sale")

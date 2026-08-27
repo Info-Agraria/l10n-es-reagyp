@@ -26,3 +26,4 @@ class TestReagypBackfill(AccountTestInvoicingCommon):
         self.assertTrue(template.ref("tax_reagyp_s_12", raise_if_not_found=False))
         self.assertTrue(template.ref("reagyp_sale", raise_if_not_found=False))
         self.assertTrue(template.ref("fp_reagyp_sale", raise_if_not_found=False))
+        self.assertTrue(template.ref("fp_reagyp_purchase", raise_if_not_found=False))
