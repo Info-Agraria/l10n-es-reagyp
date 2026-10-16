@@ -10,5 +10,5 @@ Write for a reader whose first language is not English.
 - Tables for comparisons, numbered lists for steps.
 - Facts carry a date or a number, never "recently" or "many".
 
-Example. Not: "This robust module seamlessly leverages SIGPAC data."
-Yes: "The module reads recintos from SIGPAC once per campaign."
+Example. Not: "This robust module seamlessly leverages customer data."
+Yes: "The module copies the customer address to each invoice."
