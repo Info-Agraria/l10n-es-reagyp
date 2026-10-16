@@ -1,0 +1,44 @@
+name: commit-checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, "18.0"]
+
+jobs:
+  commit-messages:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Check commit messages
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            range="$BASE..$HEAD"
+          elif echo "$BEFORE" | grep -qE '^0+$'; then
+            range="$AFTER^..$AFTER"
+          else
+            range="$BEFORE..$AFTER"
+          fi
+          status=0
+          for rev in $(git rev-list --no-merges "$range"); do
+            echo "::group::$rev $(git log -1 --format=%s "$rev")"
+            git log -1 --format=%B "$rev" > "$RUNNER_TEMP/commit-msg.txt"
+            CHECK_DOCS_COMMIT_REV="$rev" pre-commit run \
+              --hook-stage commit-msg \
+              --commit-msg-filename "$RUNNER_TEMP/commit-msg.txt" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
